@@ -73,6 +73,7 @@ if run_pressed:
         diff_csv=Path(config["data"]["difficulty_csv"]),
         hydro_xlsx=Path(config["data"]["hydro_xlsx"]),
         fleet_sizes=range(config["fleet_min"], config["fleet_max"] + 1, config["fleet_step"]),
+        annual_fixed_cost=config.get("annual_fixed_cost", 60000),
     )
 
     df = results["summary"].copy()
