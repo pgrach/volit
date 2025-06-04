@@ -1,0 +1,47 @@
+# Default configuration for the Bitcoin mining economic model
+
+# Financial assumptions
+discount_rate: 0.10       # Annual discount rate for NPV calculation (10%)
+resale_pct: 0.20          # Expected resale value of ASICs after 3 years, as a % of initial cap-ex
+horizon_years: 5          # Default modelling horizon in years
+n_paths: 1000             # Number of Monte Carlo simulation paths
+
+# Fleet size optimisation range
+fleet_min: 10             # Minimum number of ASICs to consider
+fleet_max: 100            # Maximum number of ASICs to consider
+fleet_step: 10            # Step size for iterating through fleet sizes
+
+# Data file paths (relative to this config file's directory)
+# IMPORTANT: Ensure these files exist in a 'data' subdirectory next to app.py
+data:
+  price_csv: "data/btc_price.csv"
+  difficulty_csv: "data/btc_difficulty.csv"
+  hydro_xlsx: "data/hydro_flow.xlsx"
+
+# ASIC miner models - add or modify as needed
+# Power is in kW, Hashrate in TH/s, Price in USD
+asics:
+  - model: "Antminer S19 Pro"
+    hash_rate_th: 110           # TH/s
+    watts_per_th: 29.5          # 3.25 kW ÷ 110 TH = 29.5 W/TH
+    price_usd_per_th: 22.7      # 2500 USD ÷ 110 TH
+
+  - model: "Antminer S19j Pro+"
+    hash_rate_th: 122
+    watts_per_th: 27.5          # 3.35 kW ÷ 122 TH
+    price_usd_per_th: 23.0      # 2800 / 122
+
+  - model: "Whatsminer M30S++"
+    hash_rate_th: 112
+    watts_per_th: 31.0          # 3.47 kW ÷ 112 TH
+    price_usd_per_th: 23.2      # 2600 / 112
+
+  - model: "Whatsminer M50"
+    hash_rate_th: 118
+    watts_per_th: 28.0
+    price_usd_per_th: 25.4
+
+  - model: "Whatsminer M65S Hydro"      # ← NEW entry
+    hash_rate_th: 400                   # TH/s each
+    watts_per_th: 18.5                  # Spec sheet: 18.5 W per TH
+    price_usd_per_th: 13.7              # \$13.7 per TH (≈ \$5 480 per miner)

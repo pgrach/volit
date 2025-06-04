@@ -14,7 +14,9 @@ def load_config() -> dict:
         st.error("config.yaml not found — place it next to app.py")
         st.stop()
 
-    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    raw_config_content = cfg_path.read_text(encoding="utf-8")
+    cfg = yaml.safe_load(raw_config_content)
+
     if cfg is None:
         st.error("config.yaml is empty or malformed.")
         st.stop()

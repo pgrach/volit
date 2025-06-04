@@ -115,7 +115,10 @@ def run_monte_carlo(
         th_day = utilised_kw * th_per_kw                            # (days,)
 
         rev_paths = usd_per_th_day * th_day                         # (paths,days)
-        rev_paths[:, 3 * 365] += salvage                            # resale at t = 3 y
+        salvage_idx = 3 * 365 - 1            # end of the 3rd year (0-based)
+        if salvage_idx < rev_paths.shape[1]:  # only if horizon is long enough
+            rev_paths[:, salvage_idx] += salvage
+
 
         disc = (1 + discount_rate) ** (-np.arange(horizon) / 365)
         npv  = -capex + (rev_paths * disc).sum(axis=1)
@@ -124,6 +127,8 @@ def run_monte_carlo(
         cum_cash = -capex + rev_paths.cumsum(axis=1)
         payback_days = np.nanmin(np.where(cum_cash >= 0, np.arange(horizon), np.nan), axis=1)
 
+        pb = np.nanmedian(payback_days)
+        row_pb = None if np.isnan(pb) else int(pb)     # None ⇒ shows as blank in the table
         rows.append(
             {
                 "ASICs": N,
@@ -131,7 +136,7 @@ def run_monte_carlo(
                 "NPV p5":           int(np.percentile(npv, 5)),
                 "NPV p95":          int(np.percentile(npv, 95)),
                 "Probability NPV >0 (%)": round(100 * (npv > 0).mean(), 1),
-                "Median Pay-back (days)": int(np.nanmedian(payback_days)),
+                "Median Pay-back (days)": row_pb,
             }
         )
 
