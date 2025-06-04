@@ -128,7 +128,7 @@ def run_monte_carlo(
     
     # Network hashrate from difficulty (TH/s)
     # Difficulty = Network_Hashrate * 2^32 / 600 / 1e12
-    network_hashrate = diff_paths * 600 * 1e12 / (2**32)
+    network_hashrate = diff_paths * (2**32) / (600 * 1e12)   # TH/s
     
     # BTC per TH per day
     btc_per_th_day = (block_reward * BLOCKS_PER_DAY) / network_hashrate

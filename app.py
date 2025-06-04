@@ -1,5 +1,16 @@
 import streamlit as st, yaml
 from pathlib import Path
+import unicodedata
+
+def _norm(txt: str) -> str:
+    """Replace any fancy dash with ASCII '-'."""
+    return (
+        unicodedata.normalize("NFKD", txt)
+        .replace("\u2010", "-")   # ← add this line
+        .replace("\u2011", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
 
 # ────────────────── Robust config loader ──────────────────
 @st.cache_data
@@ -78,10 +89,13 @@ if run_pressed:
 
     df = results["summary"].copy()
 
+    # ---------- normalise dashed names so they match -----------------
+    df.columns = [_norm(c) for c in df.columns]      # headers → ASCII "-"
+    optim_metric = _norm(optim_metric)               # UI string → ASCII "-"
+    # -----------------------------------------------------------------
+
     # Determine sort order based on optimisation metric -----------------------
-    sort_ascending = False
-    if optim_metric == "Median Pay‑back (days)":
-        sort_ascending = True
+    sort_ascending = optim_metric == "Median Pay-back (days)"   # <- ASCII "-"
     df = df.sort_values(optim_metric, ascending=sort_ascending).reset_index(drop=True)
 
     st.success("Simulation finished ✅")
