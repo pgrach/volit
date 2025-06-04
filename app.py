@@ -1,40 +1,42 @@
-import streamlit as st
-import pandas as pd
-import yaml
+import streamlit as st, yaml
 from pathlib import Path
-import os, streamlit as st
 
-"""
-Streamlit front‑end for the hydro‑constrained Bitcoin‑mining model
-------------------------------------------------------------------
-Business logic tweak (2025‑06‑04):
-    • The *model* — not the user — must search the fleet‑size space and report
-      the economically optimal number of ASICs.
-    • The app therefore no longer asks the analyst to pick a fleet size.
-    • Instead the user chooses the ASIC model *and* their preferred
-      optimisation metric (e.g. highest median NPV, shortest pay‑back, etc.).
-    • The results table is automatically sorted by that metric and the top row
-      is highlighted; clicking any row reveals the full NPV distribution.
-"""
-
-# -----------------------------------------------------------------------------
-# 1. Load YAML configuration
-# -----------------------------------------------------------------------------
+# ────────────────── Robust config loader ──────────────────
 @st.cache_data
-def load_config(path: str = "config.yaml") -> dict:
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+def load_config() -> dict:
+    base_dir = Path(__file__).parent
+    cfg_path = base_dir / "config.yaml"
 
-config = load_config()
+    # Show path info in sidebar for debugging
+    st.sidebar.caption(f"Config path: {cfg_path}  (exists: {cfg_path.exists()})")
 
-# -----------------------------------------------------------------------------
+    if not cfg_path.exists():
+        st.error("config.yaml not found — place it next to app.py")
+        st.stop()
+
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    if cfg is None:
+        st.error("config.yaml is empty or malformed.")
+        st.stop()
+
+    # Convert data paths to absolute so cwd never matters
+    data_dir = base_dir / "data"
+    for k in ("price_csv", "difficulty_csv", "hydro_xlsx"):
+        cfg["data"][k] = str(data_dir / Path(cfg["data"][k]).name)
+
+    return cfg
+
+
+CONFIG = load_config()
+config = CONFIG            # ← alias for backward compatibility
+# ─────────────────────────────────────────────────────────────────────────────
 # 2. Sidebar – analyst tweaks
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 st.sidebar.title("⚙️ Scenario builder")
 
-asic_models = {m["model"]: m for m in config["asics"]}
-model_name = st.sidebar.selectbox("ASIC model", list(asic_models.keys()))
-asic = asic_models[model_name]
+asic_models = {m["model"]: m for m in CONFIG["asics"]}
+model_name   = st.sidebar.selectbox("ASIC model", list(asic_models.keys()))
+asic         = asic_models[model_name]
 
 # Finance settings -------------------------------------------------------------
 fin_box = st.sidebar.expander("Finance assumptions", expanded=False)
@@ -113,4 +115,3 @@ else:
     st.markdown("👈 Fill in scenario inputs on the left, then press **Run optimisation**.")
 
 st.caption("Hydro‑constrained BTC mining economic optimisation • Streamlit prototype • v0.2")
-st.write("CWD:", os.getcwd())
