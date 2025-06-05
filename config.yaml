@@ -1,47 +1,232 @@
-# Default configuration for the Bitcoin mining economic model
+# ═══════════════════════════════════════════════════════════════
+#  HYDRO-CONSTRAINED BITCOIN MINING - PRODUCTION CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
+# Version: 2.0.0
+# Last Updated: 2024-01-01
+# ───────────────────────────────────────────────────────────────
 
-# Financial assumptions
-discount_rate: 0.10       # Annual discount rate for NPV calculation (10%)
-resale_pct: 0.20          # Expected resale value of ASICs after 3 years, as a % of initial cap-ex
-horizon_years: 5          # Default modelling horizon in years
-n_paths: 1000             # Number of Monte Carlo simulation paths
+# ─────────────────────────────────────────────────────────────
+# 1 ▸ SIMULATION PARAMETERS
+# ─────────────────────────────────────────────────────────────
+simulation:
+  # Monte Carlo settings
+  n_paths: 2000                 # Number of simulation paths
+  horizon_years: 5              # Investment horizon
+  random_seed: 42               # For reproducibility
+  
+  # Financial assumptions
+  discount_rate: 0.15           # 15% - appropriate for crypto mining risk
+  tax_rate: 0.25                # Corporate tax rate
+  
+  # Equipment lifecycle
+  salvage_year: 3               # When to apply salvage value
+  salvage_pct: 0.05             # 5% - realistic for 3-year-old ASICs
+  
+  # Operating costs (annual)
+  annual_fixed_cost: 60000      # Hydro facility maintenance
+  insurance_cost: 24000         # Equipment insurance
+  monitoring_cost: 12000        # Remote monitoring systems
+  
+  # Per-ASIC costs
+  maintenance_per_asic: 200     # Annual per-unit maintenance
+  failure_rate: 0.05            # 5% annual failure rate
 
-# Fleet size optimisation range
-fleet_min: 10             # Minimum number of ASICs to consider
-fleet_max: 100            # Maximum number of ASICs to consider
-fleet_step: 10            # Step size for iterating through fleet sizes
-
-# Data file paths (relative to this config file's directory)
-# IMPORTANT: Ensure these files exist in a 'data' subdirectory next to app.py
+# ─────────────────────────────────────────────────────────────
+# 2 ▸ DATA SOURCES
+# ─────────────────────────────────────────────────────────────
 data:
+  # Primary data files (paths resolved at runtime)
   price_csv: "data/btc_price.csv"
   difficulty_csv: "data/btc_difficulty.csv"
   hydro_xlsx: "data/hydro_flow.xlsx"
+  
+  # Data validation
+  min_history_days: 365         # Require 1 year of history
+  max_data_age_days: 30         # Warn if data >30 days old
+  
+  # Optional enhancement data
+  weather_csv: null             # Future: weather correlation
+  maintenance_log: null         # Future: planned outages
 
-# ASIC miner models - add or modify as needed
-# Power is in kW, Hashrate in TH/s, Price in USD
+# ─────────────────────────────────────────────────────────────
+# 3 ▸ FLEET OPTIMIZATION
+# ─────────────────────────────────────────────────────────────
+fleet_optimization:
+  sizing_method: "dynamic"      # "fixed" or "dynamic"
+  
+  # Percentile-based anchors (captures seasonality)
+  percentile_targets: [25, 50, 75, 90]
+  
+  # Utilization constraints
+  min_utilization: 0.30         # Reject fleets with <30% avg utilization
+  max_utilization: 0.95         # Reject fleets needing >95% peak power
+  
+  # Overbuild policy
+  max_overbuild_factor: 1.50    # Never size >150% of turbine peak
+  
+  # Search strategy
+  coarse_step_units: 10         # First pass: 10-unit steps
+  refine_neighbourhood_pct: 15  # Second pass: ±15% of best
+  fine_step_units: 1            # Fine-tuning resolution
+  
+  # Hard limits
+  minimum_viable_fleet: 5       # Operational minimum
+  maximum_fleet_size: 250       # Facility maximum
+  
+  # Advanced options
+  exclude_zero_days: true       # Exclude zero-power days from utilization
+  curtailment_penalty: 0.02     # 2% loss per curtailed kWh
+  cycling_penalty: 0.05         # 5% efficiency loss from on/off
+
+# ─────────────────────────────────────────────────────────────
+# 4 ▸ REVENUE ASSUMPTIONS
+# ─────────────────────────────────────────────────────────────
+revenue:
+  # Bitcoin protocol
+  halving_date: "2028-04-22"
+  block_reward_pre: 3.125
+  block_reward_post: 1.5625
+  blocks_per_day: 144
+  
+  # Transaction fees (% of block reward)
+  tx_fee_rate: 0.15             # 15% - conservative estimate
+  
+  # Mining pool
+  pool_fee_pct: 0.02            # 2% pool fee
+
+# ─────────────────────────────────────────────────────────────
+# 5 ▸ POWER MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+power:
+  # Efficiency factors
+  transmission_loss: 0.02       # 2% line losses
+  transformer_efficiency: 0.98  # 98% transformer efficiency
+  power_factor: 0.95           # Power factor correction
+  
+  # Minimum runtime constraints
+  min_runtime_hours: 4          # Avoid excessive cycling
+  startup_energy_kwh: 10        # Energy cost per startup
+
+# ─────────────────────────────────────────────────────────────
+# 6 ▸ ASIC SPECIFICATIONS
+# ─────────────────────────────────────────────────────────────
 asics:
-  - model: "Antminer S19 Pro"
-    hash_rate_th: 110           # TH/s
-    watts_per_th: 29.5          # 3.25 kW ÷ 110 TH = 29.5 W/TH
-    price_usd_per_th: 22.7      # 2500 USD ÷ 110 TH
+  - model: "Antminer S19 XP"
+    hash_rate_th: 141
+    watts_per_th: 21.5
+    price_usd_per_th: 7
+    warranty_years: 1
+    
+  - model: "Antminer S19 XP+ Hydro"
+    hash_rate_th: 279
+    watts_per_th: 19
+    price_usd_per_th: 9.5
+    warranty_years: 1
+    cooling: "hydro"
+    
+  - model: "Whatsminer M50S"
+    hash_rate_th: 126
+    watts_per_th: 26
+    price_usd_per_th: 22
+    warranty_years: 1
+    
+  - model: "Whatsminer M64 Hydro"
+    hash_rate_th: 200
+    watts_per_th: 19.9
+    price_usd_per_th: 12.4
+    warranty_years: 2
+    cooling: "hydro"
 
-  - model: "Antminer S19j Pro+"
-    hash_rate_th: 122
-    watts_per_th: 27.5          # 3.35 kW ÷ 122 TH
-    price_usd_per_th: 23.0      # 2800 / 122
+  - model: "Whatsminer M65S Hydro"
+    hash_rate_th: 400
+    watts_per_th: 18.5
+    price_usd_per_th: 13.7
+    warranty_years: 2
+    cooling: "hydro"
 
-  - model: "Whatsminer M30S++"
-    hash_rate_th: 112
-    watts_per_th: 31.0          # 3.47 kW ÷ 112 TH
-    price_usd_per_th: 23.2      # 2600 / 112
+  - model: "Antminer S23 Hydro"
+    hash_rate_th: 580
+    watts_per_th: 9.5
+    price_usd_per_th: 25.5
+    warranty_years: 2
+    cooling: "hydro"
 
-  - model: "Whatsminer M50"
-    hash_rate_th: 118
-    watts_per_th: 28.0
-    price_usd_per_th: 25.4
+# ─────────────────────────────────────────────────────────────
+# 7 ▸ RISK MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+risk:
+  # Scenario analysis
+  scenarios:
+    bear:
+      probability: 0.25
+      price_factor: 0.5         # 50% price drop
+      difficulty_factor: 0.8    # 20% difficulty drop
+      
+    base:
+      probability: 0.50
+      price_factor: 1.0
+      difficulty_factor: 1.2    # 20% growth
+      
+    bull:
+      probability: 0.25
+      price_factor: 2.0         # 2x price
+      difficulty_factor: 1.5    # 50% difficulty increase
+  
+  # Stress tests
+  stress_tests:
+    - name: "China ban repeat"
+      hashrate_drop: 0.35       # 35% network hashrate drop
+      duration_days: 90
+      
+    - name: "Extended drought"
+      hydro_reduction: 0.30     # 30% less water
+      duration_days: 180
+  
+  # Value at Risk
+  var_levels: [0.05, 0.10, 0.25]  # 5%, 10%, 25% VaR
 
-  - model: "Whatsminer M65S Hydro"      # ← NEW entry
-    hash_rate_th: 400                   # TH/s each
-    watts_per_th: 18.5                  # Spec sheet: 18.5 W per TH
-    price_usd_per_th: 13.7              # \$13.7 per TH (≈ \$5 480 per miner)
+# ─────────────────────────────────────────────────────────────
+# 8 ▸ REPORTING
+# ─────────────────────────────────────────────────────────────
+reporting:
+  # Output preferences
+  currency_format: "USD"
+  decimal_places: 0
+  
+  # Metrics to calculate
+  metrics:
+    - "NPV"
+    - "IRR"
+    - "Payback Period"
+    - "Cash on Cash"
+    - "Utilization"
+    - "Break-even BTC Price"
+  
+  # Export formats
+  export_formats: ["csv", "json", "pdf"]
+  
+  # Visualization preferences
+  charts:
+    theme: "dark"
+    show_confidence_bands: true
+    percentiles_to_show: [5, 25, 50, 75, 95]
+
+# ─────────────────────────────────────────────────────────────
+# 9 ▸ SYSTEM SETTINGS
+# ─────────────────────────────────────────────────────────────
+system:
+  # Logging
+  log_level: "INFO"             # DEBUG, INFO, WARNING, ERROR
+  log_to_file: true
+  log_directory: "logs"
+  
+  # Performance
+  parallel_processing: true
+  n_cores: -1                   # -1 = use all available
+  
+  # Caching
+  enable_cache: true
+  cache_expiry_hours: 24
+  
+  # Environment
+  environment: "production"     # development, staging, production

@@ -5,3 +5,5 @@ matplotlib
 pyyaml
 openpyxl
 statsmodels
+seaborn
+plotly
